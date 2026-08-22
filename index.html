@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工時及薪金打卡 App</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1, h2, h3 { margin-top: 0; }
+        .card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+        }
+        .job-select {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .job-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .job-btn.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: var(--primary);
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .clock-btn {
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+        .btn-start { background-color: #10b981; }
+        .btn-lunch-start { background-color: #f59e0b; }
+        .btn-lunch-end { background-color: #3b82f6; }
+        .btn-end { background-color: #ef4444; }
+        
+        .status-box {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .summary-card {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .summary-card.total {
+            grid-column: span 2;
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+        }
+        .summary-title { font-size: 12px; color: #64748b; }
+        .summary-value { font-size: 18px; font-weight: bold; color: #0369a1; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 4px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .delete-btn {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>⏱️ 今日打卡</h2>
+    <div class="card">
+        <label style="font-size:14px; color:#64748b;">選擇工作：</label>
+        <div class="job-select" style="margin-top:6px;">
+            <button class="job-btn active" id="btn-tnt" onclick="selectJob('T&T', 18.75)">T&T ($18.75)</button>
+            <button class="job-btn" id="btn-yh" onclick="selectJob('Yee Hong', 20.27)">Yee Hong ($20.27)</button>
+        </div>
+
+        <div class="action-grid">
+            <button class="clock-btn btn-start" onclick="clockAction('start')">▶️ 返工打卡</button>
+            <button class="clock-btn btn-lunch-start" onclick="clockAction('lunch_start')">🍱 去食飯</button>
+            <button class="clock-btn btn-lunch-end" onclick="clockAction('lunch_end')">👍 食完飯</button>
+            <button class="clock-btn btn-end" onclick="clockAction('end')">⏹️ 收工打卡</button>
+        </div>
+
+        <div class="status-box" id="today-status">
+            載入打卡狀態中...
+        </div>
+    </div>
+
+    <h2>📊 月度紀錄及統計</h2>
+    <div class="card">
+        <div style="margin-bottom: 12px;">
+            <label>選擇月份：</label>
+            <input type="month" id="month-picker" onchange="renderSummary()">
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">T&T 總收入</div>
+                <div class="summary-value" id="tnt-total">$0.00</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Yee Hong 總收入</div>
+                <div class="summary-value" id="yh-total">$0.00</div>
+            </div>
+            <div class="summary-card total">
+                <div class="summary-title">兩份工總合共</div>
+                <div class="summary-value" id="grand-total" style="color:#0f172a; font-size:22px;">$0.00</div>
+            </div>
+        </div>
+
+        <h3>詳細紀錄</h3>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>公司</th>
+                        <th>工時</th>
+                        <th>人工</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="records-table">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentJob = 'T&T';
+        let currentRate = 18.75;
+        const TODAY = new Date().toISOString().split('T')[0];
+
+        // 頁面載入初始化
+        window.onload = function() {
+            document.getElementById('month-picker').value = TODAY.substring(0, 7);
+            updateTodayStatus();
+            renderSummary();
+        };
+
+        function selectJob(job, rate) {
+            currentJob = job;
+            currentRate = rate;
+            document.getElementById('btn-tnt').classList.toggle('active', job === 'T&T');
+            document.getElementById('btn-yh').classList.toggle('active', job === 'Yee Hong');
+            updateTodayStatus();
+        }
+
+        function getRecords() {
+            return JSON.parse(localStorage.getItem('work_records') || '[]');
+        }
+
+        function saveRecords(records) {
+            localStorage.setItem('work_records', JSON.stringify(records));
+        }
+
+        function clockAction(type) {
+            let records = getRecords();
+            let todayRecord = records.find(r => r.date === TODAY && r.job === currentJob);
+
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            if (!todayRecord) {
+                todayRecord = { date: TODAY, job: currentJob, rate: currentRate, start: '', lunch_start: '', lunch_end: '', end: '' };
+                records.push(todayRecord);
+            }
+
+            todayRecord[type] = now;
+            saveRecords(records);
+            updateTodayStatus();
+            renderSummary();
+        }
+
+        function updateTodayStatus() {
+            const records = getRecords();
+            const todayRecord = records.find(r => r.date === TODAY && r.job === currentJob);
+            const statusDiv = document.getElementById('today-status');
+
+            if (!todayRecord) {
+                statusDiv.innerHTML = `<b>${currentJob}</b> 今日未有打卡紀錄。`;
+                return;
+            }
+
+            statusDiv.innerHTML = `
+                <b>${currentJob} 今日紀錄：</b><br>
+                ▶️ 返工：${todayRecord.start || '未打卡'}<br>
+                🍱 去食飯：${todayRecord.lunch_start || '未打卡'}<br>
+                👍 食完飯：${todayRecord.lunch_end || '未打卡'}<br>
+                ⏹️ 收工：${todayRecord.end || '未打卡'}
+            `;
+        }
+
+        function calculateHours(r) {
+            if (!r.start || !r.end) return 0;
+
+            let start = new Date(`${r.date}T${r.start}`);
+            let end = new Date(`${r.date}T${r.end}`);
+            let totalMs = end - start;
+
+            // 扣除 lunch Break
+            if (r.lunch_start && r.lunch_end) {
+                let lStart = new Date(`${r.date}T${r.lunch_start}`);
+                let lEnd = new Date(`${r.date}T${r.lunch_end}`);
+                if (lEnd > lStart) {
+                    totalMs -= (lEnd - lStart);
+                }
+            }
+
+            return Math.max(0, totalMs / (1000 * 60 * 60)); // 換算成小時
+        }
+
+        function renderSummary() {
+            const selectedMonth = document.getElementById('month-picker').value;
+            const records = getRecords();
+            const tbody = document.getElementById('records-table');
+            tbody.innerHTML = '';
+
+            let tntTotal = 0;
+            let yhTotal = 0;
+
+            // 過濾出選擇月份的紀錄
+            const filtered = records.filter(r => r.date.startsWith(selectedMonth));
+
+            filtered.sort((a,b) => b.date.localeCompare(a.date)).forEach((r, index) => {
+                const hours = calculateHours(r);
+                const pay = hours * r.rate;
+
+                if (r.job === 'T&T') tntTotal += pay;
+                if (r.job === 'Yee Hong') yhTotal += pay;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.date.substring(5)}</td>
+                    <td>${r.job}</td>
+                    <td>${hours.toFixed(2)} hrs</td>
+                    <td>$${pay.toFixed(2)}</td>
+                    <td><button class="delete-btn" onclick="deleteRecord('${r.date}', '${r.job}')">✕</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('tnt-total').innerText = `$${tntTotal.toFixed(2)}`;
+            document.getElementById('yh-total').innerText = `$${yhTotal.toFixed(2)}`;
+            document.getElementById('grand-total').innerText = `$${(tntTotal + yhTotal).toFixed(2)}`;
+        }
+
+        function deleteRecord(date, job) {
+            if (confirm(`確定要刪除 ${date} ${job} 嘅紀錄？`)) {
+                let records = getRecords().filter(r => !(r.date === date && r.job === job));
+                saveRecords(records);
+                updateTodayStatus();
+                renderSummary();
+            }
+        }
+    </script>
+</body>
+</html>
