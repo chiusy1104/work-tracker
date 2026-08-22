@@ -75,6 +75,40 @@
             margin-top: 12px;
             font-size: 14px;
         }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+        }
         .summary-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -110,12 +144,13 @@
             background: none;
             border: none;
             cursor: pointer;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h2>⏱️ 今日打卡</h2>
+    <h2>⏱️ 今日即時打卡</h2>
     <div class="card">
         <label style="font-size:14px; color:#64748b;">選擇工作：</label>
         <div class="job-select" style="margin-top:6px;">
@@ -133,6 +168,40 @@
         <div class="status-box" id="today-status">
             載入打卡狀態中...
         </div>
+    </div>
+
+    <h2>✍️ 手動新增 / 補打卡紀錄</h2>
+    <div class="card">
+        <div class="form-group">
+            <label>日期：</label>
+            <input type="date" id="manual-date">
+        </div>
+        <div class="form-group">
+            <label>公司：</label>
+            <select id="manual-job">
+                <option value="T&T">T&T ($18.75/h)</option>
+                <option value="Yee Hong">Yee Hong ($20.27/h)</option>
+            </select>
+        </div>
+        <div class="time-inputs">
+            <div class="form-group">
+                <label>▶️ 返工時間：</label>
+                <input type="time" id="manual-start">
+            </div>
+            <div class="form-group">
+                <label>🍱 食飯開始：</label>
+                <input type="time" id="manual-lunch-start">
+            </div>
+            <div class="form-group">
+                <label>👍 食完飯：</label>
+                <input type="time" id="manual-lunch-end">
+            </div>
+            <div class="form-group">
+                <label>⏹️ 收工時間：</label>
+                <input type="time" id="manual-end">
+            </div>
+        </div>
+        <button class="btn-submit" onclick="saveManualRecord()">💾 儲存紀錄</button>
     </div>
 
     <h2>📊 月度紀錄及統計</h2>
@@ -183,6 +252,7 @@
         // 頁面載入初始化
         window.onload = function() {
             document.getElementById('month-picker').value = TODAY.substring(0, 7);
+            document.getElementById('manual-date').value = TODAY;
             updateTodayStatus();
             renderSummary();
         };
@@ -203,6 +273,7 @@
             localStorage.setItem('work_records', JSON.stringify(records));
         }
 
+        // 一鍵即時打卡
         function clockAction(type) {
             let records = getRecords();
             let todayRecord = records.find(r => r.date === TODAY && r.job === currentJob);
@@ -216,6 +287,46 @@
 
             todayRecord[type] = now;
             saveRecords(records);
+            updateTodayStatus();
+            renderSummary();
+        }
+
+        // 手動新增 / 覆蓋紀錄
+        function saveManualRecord() {
+            const date = document.getElementById('manual-date').value;
+            const job = document.getElementById('manual-job').value;
+            const start = document.getElementById('manual-start').value;
+            const lunchStart = document.getElementById('manual-lunch-start').value;
+            const lunchEnd = document.getElementById('manual-lunch-end').value;
+            const end = document.getElementById('manual-end').value;
+
+            if (!date) {
+                alert('請選擇日期！');
+                return;
+            }
+
+            const rate = job === 'T&T' ? 18.75 : 20.27;
+            let records = getRecords();
+
+            // 尋找是否已有同日同公司的紀錄，有的話覆蓋，沒有的話新增
+            let recordIndex = records.findIndex(r => r.date === date && r.job === job);
+            const newRecord = { date, job, rate, start, lunch_start: lunchStart, lunch_end: lunchEnd, end };
+
+            if (recordIndex !== -1) {
+                records[recordIndex] = newRecord;
+            } else {
+                records.push(newRecord);
+            }
+
+            saveRecords(records);
+            alert('紀錄已儲存！');
+
+            // 清空輸入框時間
+            document.getElementById('manual-start').value = '';
+            document.getElementById('manual-lunch-start').value = '';
+            document.getElementById('manual-lunch-end').value = '';
+            document.getElementById('manual-end').value = '';
+
             updateTodayStatus();
             renderSummary();
         }
@@ -270,7 +381,7 @@
             // 過濾出選擇月份的紀錄
             const filtered = records.filter(r => r.date.startsWith(selectedMonth));
 
-            filtered.sort((a,b) => b.date.localeCompare(a.date)).forEach((r, index) => {
+            filtered.sort((a,b) => b.date.localeCompare(a.date)).forEach((r) => {
                 const hours = calculateHours(r);
                 const pay = hours * r.rate;
 
