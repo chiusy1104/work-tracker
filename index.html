@@ -140,6 +140,16 @@
             border-bottom: 1px solid #e2e8f0;
             vertical-align: top;
         }
+        tfoot tr {
+            background-color: #f1f5f9;
+            font-weight: bold;
+        }
+        tfoot td {
+            border-top: 2px solid #cbd5e1;
+            border-bottom: none;
+            padding: 10px 4px;
+            color: #0f172a;
+        }
         .time-detail {
             font-size: 11px;
             color: #64748b;
@@ -261,6 +271,14 @@
                 </thead>
                 <tbody id="records-table">
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">總計 (Total)</td>
+                        <td id="table-total-hours">0.00 hrs</td>
+                        <td id="table-total-pay">$0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -403,6 +421,7 @@
 
             let tntTotal = 0;
             let yhTotal = 0;
+            let totalHoursSum = 0;
 
             const filtered = records.filter(r => {
                 const matchDate = (!startDate || r.date >= startDate) && (!endDate || r.date <= endDate);
@@ -414,10 +433,10 @@
                 const hours = calculateHours(r);
                 const pay = hours * r.rate;
 
+                totalHoursSum += hours;
                 if (r.job === 'T&T') tntTotal += pay;
                 if (r.job === 'Yee Hong') yhTotal += pay;
 
-                // 組合詳細打卡時間字串
                 let lunchText = (r.lunch_start || r.lunch_end) ? `<br>🍱 ${r.lunch_start || '--'} ~ ${r.lunch_end || '--'}` : '';
                 let timeDetail = `▶️ ${r.start || '--'} ~ ⏹️ ${r.end || '--'}${lunchText}`;
 
@@ -432,9 +451,15 @@
                 tbody.appendChild(tr);
             });
 
+            const grandTotalPay = tntTotal + yhTotal;
+
             document.getElementById('tnt-total').innerText = `$${tntTotal.toFixed(2)}`;
             document.getElementById('yh-total').innerText = `$${yhTotal.toFixed(2)}`;
-            document.getElementById('grand-total').innerText = `$${(tntTotal + yhTotal).toFixed(2)}`;
+            document.getElementById('grand-total').innerText = `$${grandTotalPay.toFixed(2)}`;
+
+            // 更新表格底部總計欄
+            document.getElementById('table-total-hours').innerText = `${totalHoursSum.toFixed(2)} hrs`;
+            document.getElementById('table-total-pay').innerText = `$${grandTotalPay.toFixed(2)}`;
         }
 
         function deleteRecord(date, job) {
